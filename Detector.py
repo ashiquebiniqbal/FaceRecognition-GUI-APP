@@ -2,18 +2,39 @@ import cv2
 from time import time
 from PIL import Image
 from tkinter import messagebox
+from camera_utils import create_video_capture, read_frame
+
+
+def safe_showerror(title, msg):
+    try:
+        messagebox.showerror(title, msg)
+    except Exception:
+        print(f"ERROR: {title}: {msg}")
+
+
+def safe_showinfo(title, msg):
+    try:
+        messagebox.showinfo(title, msg)
+    except Exception:
+        print(f"INFO: {title}: {msg}")
+
 
 def main_app(name, timeout = 5):
         
         face_cascade = cv2.CascadeClassifier('./data/haarcascade_frontalface_default.xml')
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         recognizer.read(f"./data/classifiers/{name}_classifier.xml")
-        cap = cv2.VideoCapture(0)
+        cap = create_video_capture(0)
+        if not cap.isOpened():
+            safe_showerror('Camera Error', 'Could not open webcam or fallback video.')
+            return
         pred = False
         start_time = time()
         while True:
-            ret, frame = cap.read()
-            #default_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            ret, frame = read_frame(cap)
+            if not ret or frame is None:
+                messagebox.showerror('Camera Error', 'Failed to read from webcam or fallback video.')
+                break
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray,1.3,5)
 
@@ -79,9 +100,9 @@ def main_app(name, timeout = 5):
             if elapsed_time >= timeout:
                 print(pred)
                 if pred:
-                    messagebox.showinfo('Congrat', 'You have already checked in')
+                    safe_showinfo('Congrat', 'You have already checked in')
                 else:
-                    messagebox.showerror('Alert', 'Please check in again')
+                    safe_showerror('Alert', 'Please check in again')
                 break
 
             if cv2.waitKey(20) & 0xFF == ord('q'):

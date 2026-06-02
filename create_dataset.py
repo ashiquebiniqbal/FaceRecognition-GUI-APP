@@ -1,5 +1,6 @@
 import cv2
 import os
+from camera_utils import create_video_capture, read_frame
 
 def start_capture(name):
         path = "./data/" + name
@@ -9,10 +10,16 @@ def start_capture(name):
             os.makedirs(path)
         except:
             print('Directory Already Created')
-        vid = cv2.VideoCapture(0)
+        vid = create_video_capture(0)
+        if not vid.isOpened():
+            print("Warning: Webcam unavailable; cannot capture data.")
+            return 0
+        frame_count = 0
         while True:
 
-            ret, img = vid.read()
+            ret, img = read_frame(vid)
+            if not ret or img is None:
+                break
             new_img = None
             grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             face = detector.detectMultiScale(image=grayimg, scaleFactor=1.1, minNeighbors=5)
@@ -23,16 +30,17 @@ def start_capture(name):
                 new_img = img[y:y+h, x:x+w]
             cv2.imshow("Face Detection", img)
             key = cv2.waitKey(1) & 0xFF
+            frame_count += 1
 
-
-            try :
-                cv2.imwrite(str(path+"/"+str(num_of_images)+name+".jpg"), new_img)
-                num_of_images += 1
-            except :
-
-                pass
-            if key == ord("q") or key == 27 or num_of_images > 300: #take 300 frames
+            if new_img is not None:
+                try:
+                    cv2.imwrite(str(path+"/"+str(num_of_images)+name+".jpg"), new_img)
+                    num_of_images += 1
+                except Exception:
+                    pass
+            if key == ord("q") or key == 27 or num_of_images > 300 or frame_count > 1000:
                 break
+        vid.release()
         cv2.destroyAllWindows()
         return num_of_images
 #take frames by extract a video 
